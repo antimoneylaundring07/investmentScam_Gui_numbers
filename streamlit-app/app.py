@@ -27,7 +27,7 @@ if st.button("Login", type="primary"):
         
         if status == 200:
             st.session_state.token = data.get("token")
-            st.session_state.user = data.get("user")
+            st.session_state.user = data.get("login")
             st.success("✅ Login successful!")
             st.rerun()
         else:
