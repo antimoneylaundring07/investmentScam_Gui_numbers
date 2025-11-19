@@ -10,7 +10,7 @@ if not st.session_state.get("token"):
     st.stop()
 
 # User info
-user = st.session_state.get("user", {})
+user = st.session_state.get("login", {})
 
 col1, col2 = st.columns([3, 1])
 with col1:
