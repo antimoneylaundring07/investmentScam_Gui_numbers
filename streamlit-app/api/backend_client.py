@@ -30,16 +30,18 @@ class BackendClient:
         except Exception as e:
             return {"error": str(e)}, 500
 
-    def login(self, email, password):
+    def login(self, username, password):
+        """Login user"""
         try:
             response = requests.post(
                 f"{self.base_url}/api/auth/login",
-                json={"email": email, "password": password},
+                json={"username": username, "password": password},  # Changed from email to username
                 headers=self._get_headers()
             )
             return response.json(), response.status_code
         except Exception as e:
             return {"error": str(e)}, 500
+
 
     def logout(self):
         try:

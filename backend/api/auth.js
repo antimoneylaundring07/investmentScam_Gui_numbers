@@ -44,35 +44,36 @@ export const register = async (req, res) => {
 // Login user
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password required" });
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password required" });
     }
 
-    // Get user
+    // Get user by username
     const { data: user, error } = await supabase
       .from("users")
       .select("*")
-      .eq("email", email)
+      .eq("username", username)
       .single();
 
     if (error || !user) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    // Verify password
+    // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    const token = generateToken({ id: user.id, email: user.email, role: user.role });
-    res.json({ message: "Login successful", user: { id: user.id, email: user.email, name: user.name, role: user.role }, token });
+    const token = generateToken({ id: user.id, username: user.username, role: user.role });
+    res.json({ message: "Login successful", user: { id: user.id, username: user.username, name: user.name, role: user.role }, token });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Logout (frontend handles token removal)
 export const logout = (req, res) => {
