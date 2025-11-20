@@ -42,6 +42,38 @@ export const register = async (req, res) => {
 };
 
 // Login user
+// export const login = async (req, res) => {
+//   try {
+//     const { username, password } = req.body;
+
+//     if (!username || !password) {
+//       return res.status(400).json({ message: "Username and password required" });
+//     }
+
+//     // Get user by username
+//     const { data: user, error } = await supabase
+//       .from("login")
+//       .select("*")
+//       .eq("username", username)
+//       .single();
+
+//     if (error || !user) {
+//       return res.status(401).json({ message: "Invalid username or password" });
+//     }
+
+//     // Check password
+//     const isPasswordValid = await bcrypt.compare(password, user.password);
+//     if (!isPasswordValid) {
+//       return res.status(401).json({ message: "Invalid username or password" });
+//     }
+
+//     const token = generateToken({ id: user.id, username: user.username, role: user.role });
+//     res.json({ message: "Login successful", user: { id: user.id, username: user.username, name: user.name, role: user.role }, token });
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
 export const login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -50,7 +82,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Username and password required" });
     }
 
-    // Get user by username
+    // Get user from login table
     const { data: user, error } = await supabase
       .from("login")
       .select("*")
@@ -61,16 +93,26 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    // PLAINTEXT PASSWORD COMPARISON (NOT SECURE!)
+    if (password !== user.password) {
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    const token = generateToken({ id: user.id, username: user.username, role: user.role });
-    res.json({ message: "Login successful", user: { id: user.id, username: user.username, name: user.name, role: user.role }, token });
+    // Generate token
+    const token = generateToken({
+      username: user.username
+    });
+
+    res.json({
+      message: "Login successful",
+      user: {
+        username: user.username
+      },
+      token
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Login error:", error);
+    res.status(500).json({ message: error.message || "Server error" });
   }
 };
 
