@@ -110,8 +110,8 @@ export const login = async (req, res) => {
       token
     });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: error.message || "Server error" });
+      console.error("Login handler error:", error);
+      res.status(500).json({ message: error?.message || String(error) });
   }
 };
 

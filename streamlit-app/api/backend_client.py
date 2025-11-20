@@ -31,15 +31,22 @@ class BackendClient:
             return {"message": str(e)}, 500
 
     def login(self, username, password):
-        """Login user"""
         try:
             response = requests.post(
                 f"{self.base_url}/api/auth/login",
-                json={"username": username, "password": password},  # Changed from email to username
-                headers=self._get_headers()
+                json={"username": username, "password": password},
+                headers=self._get_headers(),
+                timeout=10
             )
-            return response.json(), response.status_code
-        except Exception as e:
+            try:
+                data = response.json()
+            except ValueError:
+                raw = response.text.strip()
+                msg = raw or f"Empty response (status {response.status_code})"
+                return {"message": msg, "raw": raw}, response.status_code
+
+            return data, response.status_code
+        except requests.exceptions.RequestException as e:
             return {"message": str(e)}, 500
 
 
