@@ -73,6 +73,7 @@ export const register = async (req, res) => {
 //   }
 // };
 
+// Login user (ONLY username + password, NO hashing)
 export const login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -81,40 +82,39 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Username and password required" });
     }
 
-    // Get user from login table
+    // Fetch user
     const { data: user, error } = await supabase
       .from("login")
       .select("*")
       .eq("username", username)
       .maybeSingle();
 
-    if (error || !user) {
+    if (error) {
+      console.error("Supabase query error:", error);
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    if (!user) {
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    // PLAINTEXT PASSWORD COMPARISON (NOT SECURE!)
-    if (password !== user.password) {
+    // Compare plain passwords
+    if (user.password !== password) {
       return res.status(401).json({ message: "Invalid username or password" });
     }
 
-    // Generate token
-    const token = generateToken({
-      username: user.username
-    });
+    const token = generateToken({ username: user.username });
 
-    res.json({
+    return res.json({
       message: "Login successful",
-      user: {
-        username: user.username
-      },
-      token
+      user: { username: user.username },
+      token,
     });
   } catch (error) {
-      console.error("Login handler error:", error);
-      res.status(500).json({ message: error?.message || String(error) });
+    console.error("Login error:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
-
 
 // Logout (frontend handles token removal)
 export const logout = (req, res) => {
