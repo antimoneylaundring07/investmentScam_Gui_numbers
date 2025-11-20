@@ -14,7 +14,7 @@ user = st.session_state.get("login", {})
 
 col1, col2 = st.columns([3, 1])
 with col1:
-    st.title(f"👋 Welcome, {user.get('name', 'User')}!")
+    st.title(f"👋 Welcome, {user.get('username')}!")
 
 with col2:
     if st.button("🚪 Logout"):
@@ -34,10 +34,7 @@ with col1:
     st.metric("User ID", user.get("id", "N/A"))
 
 with col2:
-    st.metric("Email", user.get("email", "N/A"))
-
-with col3:
-    st.metric("Role", user.get("role", "user").upper())
+    st.metric("Email", user.get("username", "N/A"))
 
 st.divider()
 
