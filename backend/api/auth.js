@@ -87,7 +87,7 @@ export const login = async (req, res) => {
       .from("login")
       .select("*")
       .eq("username", username)
-      .single();
+      .maybeSingle();
 
     if (error || !user) {
       return res.status(401).json({ message: "Invalid username or password" });

@@ -28,7 +28,7 @@ class BackendClient:
             )
             return response.json(), response.status_code
         except Exception as e:
-            return {"error": str(e)}, 500
+            return {"message": str(e)}, 500
 
     def login(self, username, password):
         """Login user"""
@@ -40,7 +40,7 @@ class BackendClient:
             )
             return response.json(), response.status_code
         except Exception as e:
-            return {"error": str(e)}, 500
+            return {"message": str(e)}, 500
 
 
     def logout(self):
