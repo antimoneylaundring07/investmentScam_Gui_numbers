@@ -11,7 +11,9 @@ if "user" not in st.session_state:
 
 # If already logged in, redirect to dashboard
 if st.session_state.token:
-    st.switch_page("pages/dashboard.py")
+    # st.switch_page("pages/dashboard.py")
+    st.experimental_set_query_params(page="dashboard")
+    st.rerun()
 
 st.title("🔐 Login")
 

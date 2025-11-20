@@ -3,6 +3,10 @@ from api.backend_client import BackendClient
 
 st.set_page_config(page_title="Dashboard", layout="wide")
 
+params = st.experimental_get_query_params()
+if params.get("page", [""])[0] != "dashboard":
+    st.stop()
+
 # Check if user is logged in
 if not st.session_state.get("token"):
     st.warning("⚠️ Please login first")
