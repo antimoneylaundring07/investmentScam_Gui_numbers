@@ -1,5 +1,4 @@
 import supabase from "../db/supabase.js";
-import bcrypt from "bcryptjs";
 import { generateToken } from "../middleware/auth.js";
 
 // Register new user
