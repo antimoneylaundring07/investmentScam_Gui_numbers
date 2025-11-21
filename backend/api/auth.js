@@ -40,39 +40,6 @@ export const register = async (req, res) => {
   }
 };
 
-// Login user
-// export const login = async (req, res) => {
-//   try {
-//     const { username, password } = req.body;
-
-//     if (!username || !password) {
-//       return res.status(400).json({ message: "Username and password required" });
-//     }
-
-//     // Get user by username
-//     const { data: user, error } = await supabase
-//       .from("login")
-//       .select("*")
-//       .eq("username", username)
-//       .single();
-
-//     if (error || !user) {
-//       return res.status(401).json({ message: "Invalid username or password" });
-//     }
-
-//     // Check password
-//     const isPasswordValid = await bcrypt.compare(password, user.password);
-//     if (!isPasswordValid) {
-//       return res.status(401).json({ message: "Invalid username or password" });
-//     }
-
-//     const token = generateToken({ id: user.id, username: user.username, role: user.role });
-//     res.json({ message: "Login successful", user: { id: user.id, username: user.username, name: user.name, role: user.role }, token });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
-
 // Login user (ONLY username + password, NO hashing)
 export const login = async (req, res) => {
   try {
