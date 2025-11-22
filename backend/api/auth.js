@@ -1,46 +1,7 @@
 import supabase from "../db/supabase.js";
 import { generateToken } from "../middleware/auth.js";
 
-// Register new user
-export const register = async (req, res) => {
-  try {
-    const { email, password, name } = req.body;
-
-    if (!email || !password || !name) {
-      return res.status(400).json({ message: "Email, password, and name required" });
-    }
-
-    // Check if user exists
-    const { data: existingUser } = await supabase
-      .from("login")
-      .select("email")
-      .eq("email", email)
-      .single();
-
-    if (existingUser) {
-      return res.status(409).json({ message: "User already exists" });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert user
-    const { data, error } = await supabase
-      .from("login")
-      .insert([{ email, password: hashedPassword, name }])
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    const token = generateToken({ id: data.id, email: data.email, role: data.role });
-    res.status(201).json({ message: "User registered", user: data, token });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Login user (ONLY username + password, NO hashing)
+// Simple login supporting two tables: 'login' (users) and 'admin' (admins).
 export const login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -49,37 +10,94 @@ export const login = async (req, res) => {
       return res.status(400).json({ message: "Username and password required" });
     }
 
-    // Fetch user
-    const { data: user, error } = await supabase
+    // First, try regular users table
+    const { data: user, error: userError } = await supabase
       .from("login")
       .select("*")
       .eq("username", username)
       .maybeSingle();
 
-    if (error) {
-      console.error("Supabase query error:", error);
+    if (userError) {
+      console.error("Supabase user query error:", userError);
       return res.status(500).json({ message: "Database error" });
     }
 
-    if (!user) {
-      return res.status(401).json({ message: "Invalid username or password" });
+    if (user && user.password === password) {
+      const token = generateToken({ username: user.username, role: "user" });
+      return res.json({
+        message: "Login successful",
+        user: { username: user.username, role: "user" },
+        token,
+      });
     }
 
-    // Compare plain passwords
-    if (user.password !== password) {
-      return res.status(401).json({ message: "Invalid username or password" });
+    // If not found in users, try admin table
+    const { data: admin, error: adminError } = await supabase
+      .from("admin")
+      .select("*")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (adminError) {
+      console.error("Supabase admin query error:", adminError);
+      return res.status(500).json({ message: "Database error" });
     }
 
-    const token = generateToken({ username: user.username });
+    if (admin && admin.password === password) {
+      const token = generateToken({ username: admin.username, role: "admin" });
+      return res.json({
+        message: "Login successful",
+        user: { username: admin.username, role: "admin" },
+        token,
+      });
+    }
 
-    return res.json({
-      message: "Login successful",
-      user: { username: user.username },
-      token,
-    });
+    // No match
+    return res.status(401).json({ message: "Invalid username or password" });
   } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ message: error.message });
+    console.error("Login handler error:", error);
+    return res.status(500).json({ message: error?.message || String(error) });
+  }
+};
+
+// (Optional) simple register that inserts into 'login' table (keeps only username & password)
+export const register = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password required" });
+    }
+
+    const { data: existingUser, error: existingError } = await supabase
+      .from("login")
+      .select("*")
+      .eq("username", username)
+      .maybeSingle();
+
+    if (existingError) {
+      console.error("Supabase exists query error:", existingError);
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    if (existingUser) {
+      return res.status(409).json({ message: "User already exists" });
+    }
+
+    const { data, error } = await supabase
+      .from("login")
+      .insert([{ username, password }])
+      .select();
+
+    if (error) {
+      console.error("Supabase insert error:", error);
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    return res.status(201).json({ message: "Registered successfully", user: data[0] });
+  } catch (error) {
+    console.error("Register handler error:", error);
+    return res.status(500).json({ message: error?.message || String(error) });
   }
 };
 

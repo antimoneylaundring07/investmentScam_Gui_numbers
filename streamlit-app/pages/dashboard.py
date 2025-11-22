@@ -1,55 +1,38 @@
 import streamlit as st
-from api.backend_client import BackendClient
 
 st.set_page_config(page_title="Dashboard", layout="wide")
 
-params = st.experimental_get_query_params()
-if params.get("page", [""])[0] != "dashboard":
-    st.stop()
+# Restore session from query params if needed
+try:
+    params = st.query_params.to_dict()
+    if "token" not in st.session_state or st.session_state.token is None:
+        if params.get("token") and params.get("username"):
+            st.session_state.token = params["token"]
+            st.session_state.user = {"username": params["username"]}
+except:
+    pass
 
-# Check if user is logged in
-if not st.session_state.get("token"):
-    st.warning("⚠️ Please login first")
+# Check if logged in
+if "token" not in st.session_state or st.session_state.token is None:
     st.switch_page("app.py")
     st.stop()
 
-# User info
-user = st.session_state.get("login", {})
-
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.title(f"👋 Welcome, {user.get('username')}!")
-
-with col2:
-    if st.button("🚪 Logout"):
-        client = BackendClient()
-        client.logout()
+# Sidebar with logout
+with st.sidebar:
+    st.write(f"**Logged in as:**")
+    st.write(f"👤 {st.session_state.user['username']}")
+    st.write("---")
+    
+    if st.button("🚪 Logout", type="primary", use_container_width=True):
         st.session_state.token = None
         st.session_state.user = None
-        st.success("✅ Logged out successfully!")
-        st.switch_page("app.py")
+        st.query_params.clear()
+        st.success("Logged out!")
+        st.rerun()
 
-st.divider()
+# Main content
+st.header(f"Welcome, {st.session_state.user['username']}")
+st.subheader("Dashboard Page Loaded Successfully!")
 
-# Dashboard content
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.metric("User ID", user.get("id", "N/A"))
-
-with col2:
-    st.metric("Email", user.get("username", "N/A"))
-
-st.divider()
-
-st.subheader("📊 Dashboard Content")
-st.info("Add your dashboard content here - charts, tables, data visualization, etc.")
-
-# Example: Display profile info
-if st.button("Refresh Profile"):
-    client = BackendClient()
-    data, status = client.get_profile()
-    if status == 200:
-        st.json(data)
-    else:
-        st.error("Failed to fetch profile")
+st.write("")
+st.write("Dashboard content goes here...")
