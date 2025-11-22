@@ -105,3 +105,23 @@ export const register = async (req, res) => {
 export const logout = (req, res) => {
   res.json({ message: "Logout successful" });
 };
+
+export const getDashboardData = async (req, res) => {
+  try {
+    console.log("📊 Dashboard request received from:", req.user);
+    const { data, error } = await supabase
+      .from("numbers")  // Your table name
+      .select("*")
+      .order("id", { ascending: true });
+
+    if (error) {
+      console.error("Supabase dashboard query error:", error);
+      return res.status(400).json({ message: error.message });
+    }
+
+    res.json({ data: data || [] });
+  } catch (error) {
+    console.error("Dashboard data error:", error);
+    res.status(500).json({ message: error.message || "Server error" });
+  }
+};

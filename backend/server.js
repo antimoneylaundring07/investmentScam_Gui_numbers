@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { login, register, logout } from "./api/auth.js";
+import { login, register, logout, getDashboardData  } from "./api/auth.js";
 import { verifyToken } from "./middleware/auth.js";
 
 dotenv.config();
@@ -23,6 +23,7 @@ app.use(express.json());
 app.post("/api/auth/register", register);
 app.post("/api/auth/login", login);
 app.post("/api/auth/logout", logout);
+app.get("/api/dashboard", verifyToken, getDashboardData);
 
 // Protected Routes (Require authentication)
 app.get("/api/profile", verifyToken, (req, res) => {

@@ -1,9 +1,10 @@
 import streamlit as st
+from streamlit_cookies_manager import EncryptedCookieManager
 from api.backend_client import BackendClient
 
 st.set_page_config(page_title="Login", layout="centered")
 
-# Hide sidebar on login screen
+# Hide sidebar
 st.markdown("""
     <style>
         section[data-testid="stSidebar"] {display: none;}
@@ -11,22 +12,27 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Session keys setup
+# Initialize cookies
+cookies = EncryptedCookieManager(
+    prefix="myapp_",
+    password="987@%#@#958"  # Change this
+)
+
+if not cookies.ready():
+    st.stop()
+
+# Session keys
 if "token" not in st.session_state:
     st.session_state.token = None
 if "user" not in st.session_state:
     st.session_state.user = None
 
-# Check query params for existing session
-try:
-    params = st.query_params.to_dict()
-    if params.get("token") and params.get("username"):
-        st.session_state.token = params["token"]
-        st.session_state.user = {"username": params["username"]}
-except:
-    pass
+# Restore from cookies
+if cookies.get("token"):
+    st.session_state.token = cookies["token"]
+    st.session_state.user = {"username": cookies.get("username", "User")}
 
-# If already logged in, redirect to dashboard
+# Redirect if logged in
 if st.session_state.token:
     st.switch_page("pages/dashboard.py")
     st.stop()
@@ -40,14 +46,14 @@ client = BackendClient()
 if st.button("Login"):
     data, status = client.login(username, password)
     if status == 200 and data.get("token"):
+        # Save to session
         st.session_state.token = data["token"]
         st.session_state.user = data["user"]
         
-        # Set query params
-        st.query_params.update({
-            "token": data["token"],
-            "username": data["user"]["username"]
-        })
+        # Save to cookies
+        cookies["token"] = data["token"]
+        cookies["username"] = data["user"]["username"]
+        cookies.save()
         
         st.success("Login successful!")
         st.rerun()
