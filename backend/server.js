@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { login, register, logout, getDashboardData  } from "./api/auth.js";
+import { login, register, logout, getDashboardData, updateDashboardData } from "./api/auth.js";  // ← Add updateDashboardData
 import { verifyToken } from "./middleware/auth.js";
 
 dotenv.config();
@@ -11,7 +11,6 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  // origin: process.env.FRONTEND_URL || "*",
   origin: "*",
   credentials: true
 }));
@@ -23,9 +22,12 @@ app.use(express.json());
 app.post("/api/auth/register", register);
 app.post("/api/auth/login", login);
 app.post("/api/auth/logout", logout);
-app.get("/api/dashboard", verifyToken, getDashboardData);
 
-// Protected Routes (Require authentication)
+// Dashboard Routes (Protected)
+app.get("/api/dashboard", verifyToken, getDashboardData);
+app.put("/api/dashboard/:id", verifyToken, updateDashboardData);  // ← ADD THIS LINE
+
+// Protected Routes
 app.get("/api/profile", verifyToken, (req, res) => {
   res.json({ message: "Protected route", user: req.user });
 });
@@ -37,7 +39,8 @@ app.get("/health", (req, res) => {
 
 // 404 Handler
 app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
+  console.log('❌ Route not found:', req.method, req.path);
+  res.status(404).json({ message: "Route not found", path: req.path });
 });
 
 // Error handling

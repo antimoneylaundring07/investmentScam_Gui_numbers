@@ -1,21 +1,27 @@
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
+dotenv.config();
 const SECRET_KEY = process.env.JWT_SECRET || "your-secret-key-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ message: "Token not provided" });
+    return res.status(401).json({ message: 'No token provided' });
   }
 
-  try {
-    const decoded = jwt.verify(token, SECRET_KEY);
-    req.user = decoded;
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      console.error('Token verification failed:', err);
+      return res.status(403).json({ message: 'Invalid token' });
+    }
+    req.user = user;  // ← This passes user info to routes
     next();
-  } catch (error) {
-    return res.status(403).json({ message: "Invalid or expired token" });
   }
+  );
 };
 
 export const generateToken = (userData) => {

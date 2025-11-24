@@ -1,5 +1,11 @@
 import supabase from "../db/supabase.js";
 import { generateToken } from "../middleware/auth.js";
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 // Simple login supporting two tables: 'login' (users) and 'admin' (admins).
 export const login = async (req, res) => {
@@ -123,5 +129,71 @@ export const getDashboardData = async (req, res) => {
   } catch (error) {
     console.error("Dashboard data error:", error);
     res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+export const updateDashboardData = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    console.log('=== UPDATE REQUEST ===');
+    console.log('Row ID:', id);
+    console.log('Update Data:', updateData);
+    console.log('User:', req.user?.username || req.user?.email);
+    
+    // Validate ID
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid ID' 
+      });
+    }
+    
+    // Validate data
+    if (!updateData || Object.keys(updateData).length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'No data to update' 
+      });
+    }
+    
+    // Update in Supabase
+    const { data, error } = await supabase
+      .from('numbers')  // Your table name
+      .update(updateData)
+      .eq('id', parseInt(id))
+      .select();
+    
+    if (error) {
+      console.error('❌ Supabase error:', error);
+      return res.status(400).json({ 
+        success: false,
+        message: error.message,
+        details: error
+      });
+    }
+    
+    if (!data || data.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Row not found' 
+      });
+    }
+    
+    console.log('✅ Update successful:', data[0]);
+    
+    res.json({ 
+      success: true, 
+      data: data[0],
+      message: 'Updated successfully' 
+    });
+    
+  } catch (error) {
+    console.error('❌ Update error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: error.message 
+    });
   }
 };
