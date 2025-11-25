@@ -4,7 +4,9 @@ from api.backend_client import BackendClient
 import pandas as pd
 import json
 
+
 st.set_page_config(page_title="Dashboard", layout="wide")
+
 
 # Initialize cookies
 cookies = EncryptedCookieManager(
@@ -12,8 +14,10 @@ cookies = EncryptedCookieManager(
     password="987@%#@#958"
 )
 
+
 if not cookies.ready():
     st.stop()
+
 
 # Restore session
 if "token" not in st.session_state or st.session_state.token is None:
@@ -21,49 +25,66 @@ if "token" not in st.session_state or st.session_state.token is None:
         st.session_state.token = cookies["token"]
         st.session_state.user = {"username": cookies.get("username", "User")}
     else:
-        st.switch_page("app.py")
+        st.error("🔒 Please login first")
+        st.markdown('<meta http-equiv="refresh" content="0; url=/" />', unsafe_allow_html=True)
         st.stop()
 
-# Sidebar logout
+
+# Sidebar
 with st.sidebar:
     st.write(f"**Logged in as:**")
     st.write(f"👤 {st.session_state.user['username']}")
+    
     st.write("---")
     
-    if st.button("🚪 Logout", type="primary", use_container_width=True):
+    if st.button("🚪 Logout", use_container_width=True):
         st.session_state.token = None
         st.session_state.user = None
         cookies["token"] = ""
         cookies["username"] = ""
         cookies.save()
         st.success("Logged out!")
-        st.rerun()
+        st.markdown('<meta http-equiv="refresh" content="1; url=/" />', unsafe_allow_html=True)
+        st.stop()
+
 
 # Main content
 st.subheader("Dashboard")
 
-# Fetch dashboard data
+
+# Fetch ALL data from backend
 with st.spinner("Loading dashboard data..."):
     client = BackendClient()
     data, status = client.get_dashboard_data(st.session_state.token)
+
 
 if status == 200 and data.get("data"):
     dashboard_items = data["data"]
     
     if len(dashboard_items) > 0:
+        # Define columns to show and edit
+        SHOW_COLUMNS = [
+            "WhatsApp Status",
+            "Review Status",
+            "Blocked Date",
+            "No of Days",
+            "Unblocked Date",
+            "Recharge Date",
+        ]
         
-        # Get all column names from data
-        all_columns = list(dashboard_items[0].keys())
-        
-        # Define editable columns
-        EDITABLE_COLUMNS = [col for col in all_columns if col.lower() not in ['id', 'number']]
-        
-        # st.info(f"**Editable columns:** {', '.join(EDITABLE_COLUMNS)}")
+        # Filter data to show only these columns + id
+        filtered_items = []
+        for item in dashboard_items:
+            filtered_item = {'id': item['id'], 'Number':item['Number']}  # Keep id for updates
+            for col in SHOW_COLUMNS:
+                if col in item:
+                    filtered_item[col] = item[col]
+            filtered_items.append(filtered_item)
         
         # Convert to JSON for JavaScript
-        data_json = json.dumps(dashboard_items)
-        editable_json = json.dumps(EDITABLE_COLUMNS)
-        backend_url = "http://localhost:5000"
+        data_json = json.dumps(filtered_items)
+        editable_json = json.dumps(SHOW_COLUMNS)
+        backend_url = "http://localhost:5000"  # Update for production
         token = st.session_state.token
         
         # HTML Component
@@ -156,7 +177,7 @@ if status == 200 and data.get("data"):
                 
                 table {{
                     width: 100%;
-                    min-width: 1500px;
+                    min-width: 800px;
                     border-collapse: collapse;
                 }}
                 
@@ -194,6 +215,11 @@ if status == 200 and data.get("data"):
                     border-radius: 4px;
                     font-size: 14px;
                     background: white;
+                }}
+                
+                .edit-input[type="date"] {{
+                    padding: 6px 8px;
+                    cursor: pointer;
                 }}
                 
                 .btn {{
@@ -296,8 +322,50 @@ if status == 200 and data.get("data"):
                 let selectedColumns = [];
                 let editingRowId = null;
                 
+                // Define which columns are date columns
+                const DATE_COLUMNS = Object.keys(data[0]).filter(col => 
+                    col.includes('Date')
+                );
+                
                 console.log('📊 Data loaded:', data.length, 'rows');
-                console.log('✏️ Editable columns:', editableColumns);
+                console.log('✏️ Columns:', editableColumns);
+                console.log('📅 Date columns:', DATE_COLUMNS);
+
+                function isDateColumn(columnName) {{
+                    return DATE_COLUMNS.includes(columnName);
+                }}
+
+                // ✅ NEW: Calculate days between two dates
+                function calculateDays(blockedDateStr) {{
+                    if (!blockedDateStr || blockedDateStr === "NA" || blockedDateStr === "") {{
+                        return "NA";
+                    }}
+                    
+                    try {{
+                        const today = new Date();
+                        const blockedDate = new Date(blockedDateStr);
+                        
+                        // Check if date is valid
+                        if (isNaN(blockedDate.getTime())) {{
+                            return "NA";
+                        }}
+                        
+                        // Set time to 0 for accurate day calculation
+                        today.setHours(0, 0, 0, 0);
+                        blockedDate.setHours(0, 0, 0, 0);
+                        
+                        // Calculate difference in milliseconds
+                        const diffMs = today.getTime() - blockedDate.getTime();
+                        
+                        // Convert to days
+                        const diffDays = Math.floor(diffMs / (1000 * 3600 * 24)) + 1;
+                        
+                        return diffDays > 0 ? diffDays.toString() : "1";
+                    }} catch (error) {{
+                        console.error('Error calculating days:', error);
+                        return "NA";
+                    }}
+                }}
                 
                 // Initialize
                 function init() {{
@@ -312,6 +380,11 @@ if status == 200 and data.get("data"):
                     const selector = document.getElementById('columnSelector');
                     
                     editableColumns.forEach(col => {{
+                        // Skip "No of Days" - it's auto-calculated
+                        if (col === "No of Days") {{
+                            return;
+                        }}
+                        
                         const label = document.createElement('label');
                         label.className = 'column-checkbox';
                         label.setAttribute('data-column', col);
@@ -327,14 +400,12 @@ if status == 200 and data.get("data"):
                         label.appendChild(checkbox);
                         label.appendChild(span);
                         
-                        // Click event on label
                         label.addEventListener('click', function(e) {{
-                            if (e.target === checkbox) return; // Let checkbox handle its own click
+                            if (e.target === checkbox) return;
                             checkbox.checked = !checkbox.checked;
                             toggleColumn(checkbox);
                         }});
                         
-                        // Change event on checkbox
                         checkbox.addEventListener('change', function() {{
                             toggleColumn(this);
                         }});
@@ -363,7 +434,7 @@ if status == 200 and data.get("data"):
                     }}
                     
                     updateSelectedCount();
-                    renderTable(); // Re-render to update button states
+                    renderTable();
                     
                     console.log('📋 Current selection:', selectedColumns);
                 }}
@@ -401,19 +472,40 @@ if status == 200 and data.get("data"):
                         // Data columns
                         columns.forEach(col => {{
                             const td = document.createElement('td');
-                            const value = row[col] || '';
-                            const isEditable = isEditing && selectedColumns.includes(col);
+                            let displayValue = row[col] || '';
+                            
+                            // ✅ Special logic for No of Days column
+                            if (col === "No of Days") {{
+                                // Auto-calculate based on Blocked Date
+                                const blockedDateStr = row["Blocked Date"];
+                                displayValue = calculateDays(blockedDateStr);
+                                console.log('📅 Calculating days for:', blockedDateStr, '= ', displayValue);
+                            }}
+                            
+                            const isEditable = isEditing && selectedColumns.includes(col) && col !== "No of Days";
                             
                             if (isEditable) {{
                                 const input = document.createElement('input');
-                                input.type = 'text';
+                                
+                                if (isDateColumn(col)) {{
+                                    input.type = 'date';
+                                    // Restrict selection to today and earlier
+                                    const today = new Date();
+                                    const yyyy = today.getFullYear();
+                                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                                    const dd = String(today.getDate()).padStart(2, '0');
+                                    input.max = yyyy + '-' + mm + '-' + dd;
+                                }} else {{
+                                    input.type = 'text';
+                                }}
+                                
                                 input.className = 'edit-input';
-                                input.value = value;
+                                input.value = row[col] || '';
                                 input.setAttribute('data-column', col);
                                 input.setAttribute('data-row-id', row.id);
                                 td.appendChild(input);
                             }} else {{
-                                td.textContent = value;
+                                td.textContent = displayValue;
                             }}
                             
                             tr.appendChild(td);
@@ -454,7 +546,6 @@ if status == 200 and data.get("data"):
                 // Edit row
                 function editRow(rowId) {{
                     console.log('🔧 Edit clicked for row:', rowId);
-                    console.log('📋 Selected columns:', selectedColumns);
                     
                     if (selectedColumns.length === 0) {{
                         showMessage('⚠️ Please select at least one column to edit', 'error');
@@ -486,6 +577,16 @@ if status == 200 and data.get("data"):
                         console.log('  📝', colName, '=', input.value);
                     }});
                     
+                    if ("Blocked Date" in updatedData) {{
+                        updatedData["No of Days"] = calculateDays(updatedData["Blocked Date"]);
+                    }}  
+
+                    if ("Unblocked Date" in updatedData && updatedData["Unblocked Date"] && updatedData["Unblocked Date"] !== "NA") {{
+                        updatedData["Blocked Date"] = "NA";
+                        updatedData["No of Days"] = "NA";
+                        console.log('Unblocked Date set, resetting Blocked Date and No of Days to NA');
+                    }}
+
                     console.log('📤 Sending update:', updatedData);
                     
                     try {{
@@ -549,8 +650,26 @@ if status == 200 and data.get("data"):
         
         st.write("---")
         
-        # Download CSV
-        df = pd.DataFrame(dashboard_items)
+        # Download CSV with calculated No of Days
+        csv_items = []
+        for item in filtered_items:
+            csv_item = item.copy()
+            # Calculate No of Days for CSV export
+            blocked_date = item.get('Blocked Date', 'NA')
+            if blocked_date and blocked_date != 'NA':
+                try:
+                    from datetime import datetime
+                    today = datetime.now()
+                    blocked_date_obj = datetime.strptime(blocked_date, '%Y-%m-%d')
+                    days_diff = (today - blocked_date_obj).days + 1
+                    csv_item['No of Days'] = max(1, days_diff)
+                except:
+                    csv_item['No of Days'] = 'NA'
+            else:
+                csv_item['No of Days'] = 'NA'
+            csv_items.append(csv_item)
+        
+        df = pd.DataFrame(csv_items)
         csv = df.to_csv(index=False)
         st.download_button(
             label="📥 Download CSV",
@@ -569,6 +688,6 @@ elif status == 401:
     cookies["token"] = ""
     cookies["username"] = ""
     cookies.save()
-    st.switch_page("app.py")
+    st.markdown('<meta http-equiv="refresh" content="0; url=/" />', unsafe_allow_html=True)
 else:
     st.error(f"❌ Failed to load data: {data.get('message', 'Error')}")

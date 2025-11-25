@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { login, register, logout, getDashboardData, updateDashboardData } from "./api/auth.js";  // ← Add updateDashboardData
+import { login, register, logout, getDashboardData, updateDashboardData, getDashboardFilteredData } from "./api/auth.js";  // ← Add updateDashboardData
 import { verifyToken } from "./middleware/auth.js";
 
 dotenv.config();
@@ -25,7 +25,7 @@ app.post("/api/auth/logout", logout);
 
 // Dashboard Routes (Protected)
 app.get("/api/dashboard", verifyToken, getDashboardData);
-app.put("/api/dashboard/:id", verifyToken, updateDashboardData);  // ← ADD THIS LINE
+app.put("/api/dashboard/:id", verifyToken, updateDashboardData);
 
 // Protected Routes
 app.get("/api/profile", verifyToken, (req, res) => {
