@@ -31,7 +31,7 @@ with st.sidebar:
     
     st.write("---")
     
-    if st.button("🚪 Logout", use_container_width=True):
+    if st.button("🚪 Logout", width="stretch"):
         st.session_state.token = None
         st.session_state.user = None
         cookies["token"] = ""
