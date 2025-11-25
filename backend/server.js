@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { login, register, logout, getDashboardData, updateDashboardData, getDashboardFilteredData } from "./api/auth.js";  // ← Add updateDashboardData
+import { login, register, logout, getDashboardData, updateDashboardData } from "./api/auth.js";  // ← Add updateDashboardData
 import { verifyToken } from "./middleware/auth.js";
 
 dotenv.config();
